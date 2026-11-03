@@ -114,6 +114,10 @@ UniDia는 코드로 큰 그림을 빠르게 그리고, GUI로 세부를 UMLet �
 
 요구사항·설계의 원본은 팀 Notion(소프트웨어공학 04 - 요구 분석)에 있으며, 이 README는 그 요약본입니다.
 
+## 라이선스
+
+이 프로젝트는 [MIT License](LICENSE)로 공개됩니다.
+
 | 문서 | 내용 |
 | --- | --- |
 | [docs/01-02-introduction.md](docs/01-02-introduction.md) | 소개, 제품 범위, 용어, 사용자 특성, 제약사항 |
