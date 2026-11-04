@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>UniDia</title>
+    <style>
+      * { box-sizing: border-box; }
+      html, body { height: 100%; margin: 0; font-family: system-ui, sans-serif; }
+      #app { display: flex; flex-direction: column; height: 100%; }
+      .toolbar { display: flex; gap: 8px; align-items: center; padding: 8px 12px; border-bottom: 1px solid #ddd; }
+      .toolbar .status { margin-left: auto; color: #666; font-size: 13px; }
+      .panes { display: flex; flex: 1; min-height: 0; }
+      /* REQ-10: 코드 영역과 캔버스는 항상 함께 표시 */
+      .code-pane { width: 40%; border-right: 1px solid #ddd; display: flex; }
+      .code-pane textarea { flex: 1; border: 0; padding: 12px; font: 14px/1.5 ui-monospace, monospace; resize: none; outline: none; }
+      .canvas-pane { flex: 1; overflow: auto; padding: 12px; }
+      .error { color: #b00020; white-space: pre-wrap; font-size: 13px; }
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
