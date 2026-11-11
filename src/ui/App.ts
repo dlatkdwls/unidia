@@ -18,6 +18,13 @@ const SAMPLE_CODE = `classDiagram
 const RENDER_DEBOUNCE_MS = 150;
 const HISTORY_DEBOUNCE_MS = 400;
 
+/** 한글 입력 상태에서는 e.key가 'ㅋ'·'ㅛ'처럼 들어오므로 물리 키(e.code)로도 판별한다. */
+function shortcutKey(e: KeyboardEvent): string {
+  if (/^[a-z]$/i.test(e.key)) return e.key.toLowerCase();
+  const match = /^Key([A-Z])$/.exec(e.code);
+  return match ? match[1].toLowerCase() : e.key.toLowerCase();
+}
+
 /** UI 계층: 코드 에디터와 캔버스를 항상 함께 표시한다 (REQ-10). */
 export class App {
   private model = new DiagramModel({ code: SAMPLE_CODE });
@@ -64,12 +71,14 @@ export class App {
       if (this.textarea.value !== state.code) this.textarea.value = state.code;
       this.committedCode = state.code;
       this.scheduleRender();
-      this.updateButtons();
     });
+    // 실행 취소 기록이 바뀌면 버튼 상태 갱신
+    // (예전에는 모델 알림 때 갱신해서, undo 도중 redo 스택에 넣기 전 상태를 보고 다시 실행 버튼이 꺼진 채 남았다)
+    this.history.subscribe(() => this.updateButtons());
 
     this.textarea.addEventListener('input', () => this.onCodeInput());
-    this.undoButton.addEventListener('click', () => this.history.undo());
-    this.redoButton.addEventListener('click', () => this.history.redo());
+    this.undoButton.addEventListener('click', () => this.undo());
+    this.redoButton.addEventListener('click', () => this.redo());
     this.root
       .querySelector('[data-action="export-mermaid"]')!
       .addEventListener('click', () => void this.exportAs('mermaid'));
@@ -83,27 +92,30 @@ export class App {
     // 입력 중에는 미리보기만 갱신하고, 잠시 멈추면 한 번의 편집(Command)으로 기록한다.
     this.scheduleRender(this.textarea.value);
     window.clearTimeout(this.historyTimer);
-    this.historyTimer = window.setTimeout(() => {
-      const next = this.textarea.value;
-      if (next === this.committedCode) return;
-      const prev = this.committedCode;
-      this.committedCode = next;
-      this.history.execute(new SetCodeCommand(this.model, prev, next));
-      this.updateButtons();
-    }, HISTORY_DEBOUNCE_MS);
+    this.historyTimer = window.setTimeout(() => this.flushPendingInput(), HISTORY_DEBOUNCE_MS);
   }
 
   private onKeyDown(e: KeyboardEvent): void {
-    if (!(e.ctrlKey || e.metaKey)) return;
-    const key = e.key.toLowerCase();
+    if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
+    const key = shortcutKey(e);
     if (key === 'z' && !e.shiftKey) {
       e.preventDefault();
-      this.flushPendingInput();
-      this.history.undo();
+      this.undo();
     } else if (key === 'y' || (key === 'z' && e.shiftKey)) {
       e.preventDefault();
-      this.history.redo();
+      this.redo();
     }
+  }
+
+  private undo(): void {
+    this.flushPendingInput();
+    this.history.undo();
+  }
+
+  private redo(): void {
+    // 아직 기록되지 않은 입력이 있으면 그것이 "새 편집"이므로 다시 실행할 것이 없어진다.
+    this.flushPendingInput();
+    this.history.redo();
   }
 
   /** 아직 기록되지 않은 입력이 있으면 먼저 기록해서 Undo가 그 입력부터 되돌리게 한다. */

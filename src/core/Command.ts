@@ -1,4 +1,5 @@
 import type { DiagramModel, NodeLayout } from './DiagramModel';
+import { Observable } from './Observable';
 
 /** Command 패턴: 편집 동작을 객체로 만들어 실행 취소/재실행을 지원한다 (REQ-11). */
 export interface Command {
@@ -6,7 +7,12 @@ export interface Command {
   undo(): void;
 }
 
-export class CommandHistory {
+/**
+ * 실행 취소/재실행 기록.
+ * 스택이 바뀔 때마다 구독자에게 알린다 (버튼 활성화 상태 갱신용).
+ * 알림은 스택을 모두 갱신한 "뒤"에 보내므로, 구독자는 항상 최신 canUndo/canRedo를 본다.
+ */
+export class CommandHistory extends Observable<void> {
   private undoStack: Command[] = [];
   private redoStack: Command[] = [];
 
@@ -14,6 +20,7 @@ export class CommandHistory {
     command.execute();
     this.undoStack.push(command);
     this.redoStack = [];
+    this.emit();
   }
 
   undo(): boolean {
@@ -21,6 +28,7 @@ export class CommandHistory {
     if (!command) return false;
     command.undo();
     this.redoStack.push(command);
+    this.emit();
     return true;
   }
 
@@ -29,6 +37,7 @@ export class CommandHistory {
     if (!command) return false;
     command.execute();
     this.undoStack.push(command);
+    this.emit();
     return true;
   }
 
@@ -57,6 +66,7 @@ export class SetCodeCommand implements Command {
   }
 }
 
+/** 노드 이동·크기 조절 (GUI 편집도 실행 취소 대상, REQ-02·REQ-11). */
 export class MoveNodeCommand implements Command {
   private prev: NodeLayout | undefined;
 

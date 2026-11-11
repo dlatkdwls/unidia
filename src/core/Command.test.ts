@@ -43,4 +43,20 @@ describe('CommandHistory (REQ-11)', () => {
     expect(history.undo()).toBe(false);
     expect(history.redo()).toBe(false);
   });
+
+  it('구독자는 스택이 갱신된 뒤에 알림을 받는다 (다시 실행 버튼이 켜져야 함)', () => {
+    const model = new DiagramModel({ code: 'a' });
+    const history = new CommandHistory();
+    const seen: { canUndo: boolean; canRedo: boolean }[] = [];
+    history.subscribe(() => seen.push({ canUndo: history.canUndo, canRedo: history.canRedo }));
+    // 예전 버그: 모델 구독자가 undo 도중(redo 스택에 넣기 전)에 버튼을 갱신해서 다시 실행이 꺼진 채 남았다
+    let canRedoSeenByModelListener: boolean | null = null;
+    model.subscribe(() => (canRedoSeenByModelListener = history.canRedo));
+
+    history.execute(new SetCodeCommand(model, 'a', 'b'));
+    history.undo();
+
+    expect(canRedoSeenByModelListener).toBe(false); // 모델 알림 시점에는 아직 갱신 전
+    expect(seen.at(-1)).toEqual({ canUndo: false, canRedo: true }); // 기록 알림은 갱신 후
+  });
 });
